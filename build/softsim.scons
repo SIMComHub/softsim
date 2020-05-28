@@ -1,0 +1,68 @@
+#===============================================================================
+# Build by Quectel@20170324		Hyman.DING  
+#===============================================================================
+Import('env')
+env = env.Clone()
+
+env.RequirePublicApi('KERNEL', area='core')
+env.RequirePublicApi('SERVICES', area='core')
+env.RequirePublicApi('DEBUGTOOLS', area='core')
+env.RequirePublicApi('SYSTEMDRIVERS', area='core')
+env.RequirePublicApi('DAL', area='core')
+env.RequirePublicApi('HWENGINES', area='core')
+env.RequirePublicApi('MEMORY', area='core')
+env.RequirePublicApi('MPROC', area='core')
+env.RequirePublicApi('STORAGE', area='core')
+env.RequirePublicApi('QAPI', area='core')
+env.RequirePublicApi('BUSES', area='core')
+env.RequirePublicApi('RTLD', area='core')
+env.RequirePublicApi('AT', area='api')
+env.RequirePublicApi('DMS', area='api')
+env.RequirePublicApi('UIMRMT', area='api')
+env.RequirePublicApi('QAPI', area='dataservices')
+env.RequirePublicApi('QAPI', area='dataservices')
+env.RequirePublicApi('ATFWD_EXT')
+env.Append(CFLAGS="-I ${BUILD_ROOT}/core/mproc/qmi/qcci -I ${BUILD_ROOT}/core/mproc/qmi/qcsi -I ${BUILD_ROOT}/core/mproc/qmi/qsap -I ${BUILD_ROOT}/core/mproc/qmi/common -I ${BUILD_ROOT}/core/mproc/qmi/core_server -I ${BUILD_ROOT}/core/mproc/qmi/encdec")
+
+#Quectel API Module
+env.RequirePublicApi('QUEC_SOFTSIM',area='dataservices')
+
+SRCPATH = '${BUILD_ROOT}/dataservices/softsim/src'
+env.VariantDir('${BUILDPATH}', SRCPATH, duplicate=0)
+
+
+QUECTEL_SOFTSIM_SOURCES = [
+	'${BUILDPATH}/softsim_entry.c',
+	'${BUILDPATH}/softsim_simdrv.c',
+	'${BUILDPATH}/qmi_remotesim.c',
+	'${BUILDPATH}/softsim_porting.c',
+]
+
+#SIMCOM lucong add softsim on-off 20190822 start
+if 'SIMCOM_SOFTSIM_FUNC' in env: 
+#SIMCOM lucong add softsim on-off 20190822 end
+	env.AddLibrary(['APPS_PROC'], ('${BUILDPATH}/softsim'), QUECTEL_SOFTSIM_SOURCES)
+	env.AddOEMLibrary(['APPS_PROC'], ('${BUILDPATH}/softsim_lib.lib'))
+
+#SIMCOM lucong add softsim on-off 20190822 start	
+if 'SIMCOM_SOFTSIM_FUNC' in env: 
+#SIMCOM lucong add softsim on-off 20190822 end
+     if 'USES_RCINIT' in env:
+				RCINIT_IMG = ['APPS_PROC']
+				env.AddRCInitTask(
+		 			 RCINIT_IMG,
+		    		 {
+							'sequence_group'            : 'RCINIT_GROUP_7',              # required
+							'thread_name'               : 'quectel_softsim_entry',       # required
+							'stack_size_bytes'          : '8192',                        # required
+							'thread_entry'              : 'quectel_softsim_entry',    # opt
+							'priority_amss_order'       : 'SHARED_BACKGROUND_PRI_ORDER',
+							'cpu_affinity'              : 'REX_ANY_SMT_MASK',
+							'thread_type'               : 'RCINIT_TASK_QURTTASK',        # required
+		    		}
+				)
+
+#-------------------------------------------------------------------------------
+# Load the rest of the software units
+#-------------------------------------------------------------------------------
+env.LoadSoftwareUnits()

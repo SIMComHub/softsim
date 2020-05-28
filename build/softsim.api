@@ -1,0 +1,23 @@
+#===============================================================================
+#
+# Quectel QMI daemon
+#
+# GENERAL DESCRIPTION
+#    build script
+#
+# Copyright (c) 2016 by Quectel Technologies, Inc. All Rights Reserved.
+#
+#-------------------------------------------------------------------------------
+#                      EDIT HISTORY FOR FILE
+#
+#  $Header: //components/rel/ril.tx2.0/quectel-daemon/build/quectel-daemon.api#2 $
+#  $DateTime: 2016/10/20 05:14:08 $
+#                      
+#  This section contains comments describing changes made to the module.
+#  Notice that changes are listed in reverse chronological order.
+#  
+#===============================================================================
+Import('env')
+
+env.PublishPublicApi('QUEC_SOFTSIM', ["${INC_ROOT}/dataservices/softsim/inc"])
+env.LoadAPIUnits()
