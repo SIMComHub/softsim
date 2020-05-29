@@ -858,12 +858,18 @@ void softsim_atfwd_cmd_handler_cb(boolean is_reg, char *atcmd_name,
                     {
                         strcpy((char *)p_out_buffer, "+PSOFTSIM:");
                         p_out_buffer[strlen((char *)p_out_buffer)] = '0' + use_softsim;
-                    }
+                    }else if (softsim_do_at_cmd((char *)at_fwd_params, (char *)p_out_buffer, AT_BUFFER_SIZE))
+					{
+						free((void *)p_out_buffer);
+						qapi_atfwd_send_resp(atcmd_name, (char *)at_fwd_params, QUEC_AT_RESULT_ERROR_V01);
+						return;
+					}
                 }
                 else if (softsim_do_at_cmd((char *)at_fwd_params, (char *)p_out_buffer, AT_BUFFER_SIZE))
                 {
                     //cmd_result.result_code = APB_PROXY_RESULT_ERROR;
                     //softsim_trace_hex((uint8_t*)order_info, sizeof(order_info)); 
+                    free((void *)p_out_buffer); //bugfix
                     qapi_atfwd_send_resp(atcmd_name, "", QUEC_AT_RESULT_ERROR_V01);
 		            return;
                 }			  
