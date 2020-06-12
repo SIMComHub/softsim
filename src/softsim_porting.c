@@ -101,7 +101,7 @@ extern int simcom_qapi_backup_apps_restore(uint8 bCoverAll);
 extern uint32 qapi_DAM_Visual_AT_Open(void *func);
 extern void qapi_DAM_Visual_AT_Input(const unsigned char *data, unsigned short length);
 extern unsigned short qapi_DAM_Visual_AT_Output(unsigned char *data, unsigned short length);
-
+extern void softsim_set_init_data_path(const unsigned short * file);
 
 void softsim_unsolicited_message(int level, char *event)
 {
@@ -903,7 +903,7 @@ void links_softsim_init(void)
     //qurt_thread_t  Thread_Handle;
     qurt_pipe_attr_t attr;
     int   Thread_Result;
-
+    softsim_set_init_data_path((const unsigned short *)"/softsim/softsim.init.dat");
     //ret_val = qapi_FS_Mk_Dir(NVRAM_EF_SOFTSIM_GROUP, QAPI_FS_S_IRUSR_E|QAPI_FS_S_IWUSR_E|QAPI_FS_S_IXUSR_E);
     //QAPI_MSG_SPRINTF( MSG_SSID_LINUX_DATA , MSG_LEGACY_HIGH, "creating softsim directory result:%d", ret_val );
     //softsim_set_init_data_path(NVRAM_EF_SOFTSIM_INIT_LID);
