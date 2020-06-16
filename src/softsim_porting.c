@@ -415,7 +415,27 @@ int softsim_fs_Close(FS_HANDLE FileHandle)
 
 int softsim_fs_Read(FS_HANDLE FileHandle, void * DataPtr, UINT Length, UINT * Read)
 {
-    return qapi_FS_Read(FileHandle,DataPtr,Length,(uint32 *)Read);
+    UINT i=0,j=0;
+    int ret=-1;
+    while (i<Length)
+    {
+        j= Length-i;
+        //30k
+        if (j>30720)
+        {
+            j=30720;
+        }
+        ret=qapi_FS_Read(FileHandle,(char*)((char*)DataPtr+i),j,(uint32 *)Read);
+
+        if (ret || *Read!=j)
+        {
+            *Read +=i;
+            return ret;
+        }
+        i += j;
+    }
+    *Read=i;
+    return ret;
 }
 
 int softsim_fs_Write(FS_HANDLE FileHandle, void * DataPtr, UINT Length, UINT * Written)
@@ -425,8 +445,13 @@ int softsim_fs_Write(FS_HANDLE FileHandle, void * DataPtr, UINT Length, UINT * W
 
 int softsim_fs_Seek(FS_HANDLE FileHandle, int Offset, int Whence)
 {
-    qapi_FS_Offset_t seek_status = 0;
-    return qapi_FS_Seek(FileHandle, Offset, Whence, &seek_status);
+    qapi_FS_Offset_t seek_offset = 0;
+    QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA , MSG_LEGACY_HIGH, "fs:%d!",FileHandle);
+    Whence++;
+    if(Whence == 3) Whence++;
+    qapi_FS_Seek(FileHandle, Offset, Whence, &seek_offset);
+    QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA , MSG_LEGACY_HIGH, "fs:%d,offset:%d,result_offset:%d!",FileHandle,Offset,seek_offset); 
+    return seek_offset;
 }
 
 int softsim_fs_Commit(FS_HANDLE FileHandle)
