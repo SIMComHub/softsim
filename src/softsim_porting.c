@@ -22,6 +22,7 @@
 #define NVRAM_EF_SOFTSIM_INFO_LID "/softsim/INFO"
 #define NVRAM_EF_SOFTSIM_START_LID "/softsim/START"
 #define NVRAM_EF_SOFTSIM_INIT_LID "/INITDATA/INIT"
+#define NVRAM_EF_SOFTSIM_INIT_DAT "/customer/softsim.init.dat"
 
 #define NVRAM_EF_SOFTSIM_IMG_SIZE 2000
 #define NVRAM_EF_SOFTSIM_INFO_SIZE 256
@@ -928,7 +929,7 @@ void links_softsim_init(void)
     //qurt_thread_t  Thread_Handle;
     qurt_pipe_attr_t attr;
     int   Thread_Result;
-    softsim_set_init_data_path((const unsigned short *)"/softsim/softsim.init.dat");
+    softsim_set_init_data_path((const unsigned short *)NVRAM_EF_SOFTSIM_INIT_DAT);
     //ret_val = qapi_FS_Mk_Dir(NVRAM_EF_SOFTSIM_GROUP, QAPI_FS_S_IRUSR_E|QAPI_FS_S_IWUSR_E|QAPI_FS_S_IXUSR_E);
     //QAPI_MSG_SPRINTF( MSG_SSID_LINUX_DATA , MSG_LEGACY_HIGH, "creating softsim directory result:%d", ret_val );
     //softsim_set_init_data_path(NVRAM_EF_SOFTSIM_INIT_LID);
