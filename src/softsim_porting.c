@@ -148,7 +148,7 @@ void softsim_trace(char *fmt,...)
 
 SOFTSIM_bool system_set_apn(void)
 {
-  char apn_buffer[128];
+  char apn_buffer[256];
   unsigned short ret;
   int i;
   SoftsimApnProfile_st *apn=NULL;
@@ -171,24 +171,60 @@ SOFTSIM_bool system_set_apn(void)
   //////// visual AT com to set apn ////////
   if (qapi_DAM_Visual_AT_Open(NULL))
   {
-    for (i = 0; i < 3; ++i)
-    {
-      sprintf((char* )apn_buffer,"at+cgdcont=1,\"IPV4V6\",\"%s\"\r\n",apn->apn);
-      qapi_DAM_Visual_AT_Input((const unsigned char*)apn_buffer,strlen(apn_buffer));
-      qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
-      ret=qapi_DAM_Visual_AT_Output((unsigned char*)apn_buffer,sizeof(apn_buffer));
-      if (strstr((const char*)apn_buffer,"OK"))
+      const char *pdp_type = "IP";
+      int type = apn->pdp_type[0] - '0';
+      if (type == 2)
       {
-        QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA , MSG_LEGACY_HIGH, "at+cgdcont OK, ret=%d",ret);
-        break;
-      }else
-      {
-        QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA , MSG_LEGACY_HIGH, "at+cgdcont ERROR, ret=%d,%s",ret,apn_buffer);
+          pdp_type = "IPV4V6";
       }
-    }
-  }else
+      else if (type == 4)
+      {
+          pdp_type = "Non-IP";
+      }
+
+      for (i = 0; i < 3; ++i)
+      {
+          sprintf((char *)apn_buffer, "at+cgdcont=1,\"%s\",\"%s\"\r\n", pdp_type, apn->apn);
+          qapi_DAM_Visual_AT_Input((const unsigned char *)apn_buffer, strlen(apn_buffer));
+          qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
+          ret = qapi_DAM_Visual_AT_Output((unsigned char *)apn_buffer, sizeof(apn_buffer));
+          if (strstr((const char *)apn_buffer, "OK"))
+          {
+              QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "at+cgdcont OK, ret=%d", ret);
+              break;
+          }
+          else
+          {
+              QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "at+cgdcont ERROR, ret=%d,%s", ret, apn_buffer);
+          }
+      }
+
+      type = apn->auth_type[0] - '0';
+      if (type < 0 || type > 3)
+      {
+          type = 0;
+      }
+
+      for (i = 0; i < 3; ++i)
+      {
+          sprintf((char *)apn_buffer, "AT+CGAUTH=1,%d,\"%s\",\"%s\"\r\n", type, apn->user_name, apn->pwd);
+          qapi_DAM_Visual_AT_Input((const unsigned char *)apn_buffer, strlen(apn_buffer));
+          qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
+          ret = qapi_DAM_Visual_AT_Output((unsigned char *)apn_buffer, sizeof(apn_buffer));
+          if (strstr((const char *)apn_buffer, "OK"))
+          {
+              QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "at+CGAUTH OK, ret=%d", ret);
+              break;
+          }
+          else
+          {
+              QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "at+CGAUTH ERROR, ret=%d,%s", ret, apn_buffer);
+          }
+      }
+  }
+  else
   {
-    QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA , MSG_LEGACY_HIGH, "failed to open visual at");
+      QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "failed to open visual at");
   }
   //////////////////////////////////////////
   free(apn);
