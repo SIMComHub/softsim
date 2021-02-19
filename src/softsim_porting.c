@@ -207,7 +207,7 @@ SOFTSIM_bool system_set_apn(void)
 
       for (i = 0; i < 3; ++i)
       {
-          sprintf((char *)apn_buffer, "AT+CGAUTH=1,%d,\"%s\",\"%s\"\r\n", type, apn->user_name, apn->pwd);
+          sprintf((char *)apn_buffer, "AT+CGAUTH=1,%d,\"%s\",\"%s\"\r\n", type, apn->pwd, apn->user_name);
           qapi_DAM_Visual_AT_Input((const unsigned char *)apn_buffer, strlen(apn_buffer));
           qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
           ret = qapi_DAM_Visual_AT_Output((unsigned char *)apn_buffer, sizeof(apn_buffer));
