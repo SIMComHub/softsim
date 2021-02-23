@@ -898,6 +898,11 @@ void softsim_atfwd_cmd_handler_cb(boolean is_reg, char *atcmd_name,
                             softsim_clear_flash();
                             start = 0;
                         }
+						else if (!strncmp((char *)at_fwd_params + 6, "APN", 3))
+                        {
+							system_set_apn();
+							return;
+                        }
                         else
                         {
                             start = 0;
