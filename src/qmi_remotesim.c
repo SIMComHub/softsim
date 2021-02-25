@@ -310,7 +310,7 @@ void uim_remote_ind_cb(
             if (apdu_msg.command_apdu[0x01] == 0x88 && apdu_msg.command_apdu[0x02] == 0x00 && apdu_msg.command_apdu[0x03] == 0x81)
             {
                 int fd = -1;
-                int bytes_read = 0;
+                uint32 bytes_read = 0;
                 qapi_FS_Open(NVRAM_EF_SOFTSIM_WHITECARD_LID, QAPI_FS_O_RDWR_E | QAPI_FS_O_CREAT_E, &fd);
                 qapi_FS_Read(fd, (uint8_t *)WHITECARD, 16 + 1 + 53, &bytes_read);
                 qapi_FS_Close(fd);
