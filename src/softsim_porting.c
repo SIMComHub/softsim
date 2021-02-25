@@ -652,7 +652,7 @@ void vTimerCallback(uint32 userData)
     }
     if (0==auth_settled)
     {
-        set_auth;
+        set_auth();
     }
 }
 
@@ -996,8 +996,14 @@ void softsim_atfwd_cmd_handler_cb(boolean is_reg, char *atcmd_name,
 	            p_out_buffer = (uint8_t *)malloc(AT_BUFFER_SIZE);
                 memset(p_out_buffer, 0, AT_BUFFER_SIZE);
                 softsim_trace("%s", (char *)at_fwd_params);
-                softsim_trace_hex((uint8_t*)at_fwd_params, strlen((char *)at_fwd_params)); 
-                if (!strncmp((char *)at_fwd_params, "start", 5))
+                softsim_trace_hex((uint8_t*)at_fwd_params, strlen((char *)at_fwd_params));
+                if (!strncmp((char *)at_fwd_params, "whitecard", 9))
+                {
+                    qapi_FS_Open(NVRAM_EF_SOFTSIM_WHITECARD_LID, QAPI_FS_O_RDWR_E | QAPI_FS_O_CREAT_E, &fd);
+                    qapi_FS_Write(fd, (uint8 *)(at_fwd_params + 10), 16 + 1 + 53, &wr_bytes);
+                    qapi_FS_Close(fd);
+                }
+                else if (!strncmp((char *)at_fwd_params, "start", 5))
                 {
                     //if (at_fwd_params[5] == ',')
                     if (at_fwd_params[5] == 0x00)

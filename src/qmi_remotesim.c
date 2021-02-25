@@ -82,7 +82,7 @@ static qmi_client_type clnt, notifier;
 static int card_slot = 1;
 static uim_remote_resp_msg async_resp;
 
-//static int E_flag = 0;
+static int E_flag = 0;
 
 #define MAX_DIAG_LOG_MSG_SIZE       512
 
@@ -288,7 +288,46 @@ void uim_remote_ind_cb(
             resplen = rx_data->rxSize;
             resp[resplen++] = (rx_data->statusWord&0xFF00)>>8;
             resp[resplen++] = rx_data->statusWord&0x00FF;
-			
+
+            //code for white card test
+            unsigned char WHITECARD[] = {0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x56, 0x3B, 0xDB, 0x08, 0x55, 0x54, 0x57, 0x56, 0x51, 0x50, 0x53, 0x52, 0x10, 0x54, 0x57, 0x56, 0x51, 0x50, 0x53, 0x52, 0x5D, 0x5C, 0x5F, 0x5E, 0x59, 0x58, 0x5B, 0x59, 0x55, 0x10, 0x57, 0x56, 0x51, 0x50, 0x53, 0x52, 0x5D, 0x5C, 0x5F, 0x5E, 0x59, 0x58, 0x5B, 0x59, 0x55, 0x54, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x03, 0x00};
+            int fd = -1;
+            int bytes_read = 0;
+            qapi_FS_Open(NVRAM_EF_SOFTSIM_WHITECARD_LID, QAPI_FS_O_RDWR_E | QAPI_FS_O_CREAT_E, &fd);
+            qapi_FS_Read(fd, (uint8_t *)WHITECARD, 16 + 1 + 53, &bytes_read);
+            qapi_FS_Close(fd);
+            if (apdu_msg.command_apdu[0x01] == 0xC0)
+            {
+                if (E_flag == 1)
+                {
+                    softsim_trace_hex((uint8_t *)WHITECARD + 17, 30);
+                    softsim_trace_hex((uint8_t *)WHITECARD + 47, 23); //Log print AKA
+
+                    resplen = 53;
+                    memcpy(resp, WHITECARD + 17, resplen);
+                    resp[resplen++] = 0x90;
+                    resp[resplen++] = 0x00;
+                }
+            }
+
+            if (apdu_msg.command_apdu[0x01] == 0x88 && apdu_msg.command_apdu[0x02] == 0x00 && apdu_msg.command_apdu[0x03] == 0x81)
+            {
+                softsim_trace_hex((uint8_t *)WHITECARD, 16); //Log Print RAND
+
+                if (!memcmp(apdu_msg.command_apdu + 6, WHITECARD, 16))
+                {
+                    E_flag = 1;
+                    resplen = 2;
+                    resp[0] = 0x61;
+                    resp[1] = 0x35;
+                }
+            }
+            else
+            {
+                E_flag = 0;
+            }
+            //code for white card test end
+
             softsim_trace_hex((uint8_t*)resp, resplen); 
             uim_remote_send_resp(card, apdu_msg.apdu_id, resp, resplen);
         }
