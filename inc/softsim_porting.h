@@ -6,7 +6,7 @@
 #include "qapi_uart.h"
 
 #define SOFTSIM_NULL 0
-#define NVRAM_EF_SOFTSIM_WHITECARD_LID "softsim/WHITECARD"
+#define NVRAM_EF_SOFTSIM_WHITECARD_LID "/softsim/WHITECARD"
 typedef enum
 {
     SOFTSIM_FALSE,
