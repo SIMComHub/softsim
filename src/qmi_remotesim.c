@@ -252,7 +252,7 @@ int uim_remote_send_resp(uim_remote_card *card, int apdu_id, unsigned char *resp
         return QMI_RESULT_FAILURE_V01;
     return uim_remote_apdu_resp(card, QMI_RESULT_SUCCESS_V01, card->slot, apdu_id, resplen, resp, 0, resplen);
 }
-
+static unsigned char atr[18] = {0x3B,0x7D,0x96,0x00,0x00,0x57,0x44,0x4B,0x4F,0x46,0x86,0x93,0x09,0x00,0x00,0x00,0x00,0x00};
 void uim_remote_ind_cb(
     qmi_client_type user_handle,
     unsigned int msg_id,
@@ -261,7 +261,7 @@ void uim_remote_ind_cb(
     void *ind_cb_data)
 {
     uim_remote_card *card = (uim_remote_card *)ind_cb_data;
-    static unsigned char atr[18] = {0x3B,0x7D,0x96,0x00,0x00,0x57,0x44,0x4B,0x4F,0x46,0x86,0x93,0x09,0x00,0x00,0x00,0x00,0x00};
+
     static int atrlen = 0;
     switch (msg_id)
     {
@@ -501,7 +501,7 @@ int connect_modem(void)
     
 
     rc = uim_remote_connect_card(&card);
-    rc = uim_remote_event(&card, UIM_REMOTE_CARD_INSERTED_V01, card.slot, NULL, 0, 0, UIM_REMOTE_CARD_ERROR_TYPE_ENUM_MIN_ENUM_VAL_V01);
+    rc = uim_remote_event(&card, UIM_REMOTE_CARD_INSERTED_V01, card.slot, atr, sizeof(atr), 0, UIM_REMOTE_CARD_ERROR_TYPE_ENUM_MIN_ENUM_VAL_V01);
     return rc;
 }
 

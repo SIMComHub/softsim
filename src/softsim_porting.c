@@ -103,6 +103,9 @@ extern void qapi_DAM_Visual_AT_Input(const unsigned char *data, unsigned short l
 extern unsigned short qapi_DAM_Visual_AT_Output(unsigned char *data, unsigned short length);
 extern void softsim_set_init_data_path(const unsigned short * file);
 
+static int apn_settled=1;
+static int auth_settled=1;
+
 void softsim_unsolicited_message(int level, char *event)
 {
     uint8_t *p_urc_buffer = NULL;
@@ -145,7 +148,7 @@ void softsim_trace(char *fmt,...)
   if(buf_ptr)
   	free(buf_ptr);
 }
-
+/*
 SOFTSIM_bool system_set_apn(void)
 {
   char apn_buffer[256];
@@ -230,7 +233,118 @@ SOFTSIM_bool system_set_apn(void)
   free(apn);
   return (SOFTSIM_bool)(0);
 }
+*/
+static void set_apn(void)
+{
+    char apn_buffer[256];
+    unsigned short ret;
+    SoftsimApnProfile_st *apn;
 
+    apn = (SoftsimApnProfile_st *)malloc(sizeof(SoftsimApnProfile_st));
+    if (apn == NULL)
+    {
+        softsim_trace("malloc failed");
+        return;
+    }
+    memset(apn, 0, sizeof(SoftsimApnProfile_st));
+    softsim_get_apn(apn);
+
+    QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "user %s, pwd %s, apn_name %s", apn->user_name, apn->pwd, apn->apn);
+    if (qapi_DAM_Visual_AT_Open(NULL))
+    {
+        const char *pdp_type = "IP";
+        int type = apn->pdp_type[0] - '0';
+        if (type == 2)
+        {
+            pdp_type = "IPV4V6";
+        }
+        else if (type == 4)
+        {
+            pdp_type = "Non-IP";
+        }
+
+        sprintf((char *)apn_buffer, "AT+CGDCONT=1,\"%s\",\"%s\"\r\n", pdp_type, apn->apn);
+        QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "> %s", apn_buffer);
+        qapi_DAM_Visual_AT_Input((const unsigned char *)apn_buffer, strlen(apn_buffer));
+
+        qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
+        memset(apn_buffer, 0, sizeof(apn_buffer));
+        ret = qapi_DAM_Visual_AT_Output((unsigned char *)apn_buffer, sizeof(apn_buffer));
+        QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "< ret=%d %s", ret, apn_buffer);
+
+        sprintf((char *)apn_buffer, "%s", "AT+CGDCONT?\r\n");
+        QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "> %s", apn_buffer);
+        qapi_DAM_Visual_AT_Input((const unsigned char *)apn_buffer, strlen(apn_buffer));
+
+        qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
+        memset(apn_buffer, 0, sizeof(apn_buffer));
+        ret = qapi_DAM_Visual_AT_Output((unsigned char *)apn_buffer, sizeof(apn_buffer));
+        QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "< ret=%d %s", ret, apn_buffer);
+
+        if (strstr((const char *)apn_buffer, (const char *)apn->apn))
+        {
+            apn_settled=1;
+        }
+    }
+    else
+    {
+        QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "failed to open visual at");
+    }
+    free(apn);
+}
+static void set_auth(void)
+{
+    char apn_buffer[256];
+    unsigned short ret;
+    SoftsimApnProfile_st *apn;
+
+    apn = (SoftsimApnProfile_st *)malloc(sizeof(SoftsimApnProfile_st));
+    if (apn == NULL)
+    {
+        softsim_trace("malloc failed");
+        return;
+    }
+    memset(apn, 0, sizeof(SoftsimApnProfile_st));
+    softsim_get_apn(apn);
+
+    QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "auth_type %s, net_type %s, pdp_type %s", apn->auth_type, apn->net_type, apn->pdp_type);
+    if (qapi_DAM_Visual_AT_Open(NULL))
+    {
+        int type = apn->auth_type[0] - '0';
+        if (type < 0 || type > 3)
+        {
+            type = 0;
+        }
+
+        sprintf((char *)apn_buffer, "AT+CGAUTH=1,%d,\"%s\",\"%s\"\r\n", type, apn->pwd, apn->user_name);
+        QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "> %s", apn_buffer);
+        qapi_DAM_Visual_AT_Input((const unsigned char *)apn_buffer, strlen(apn_buffer));
+
+        qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
+
+        ret = qapi_DAM_Visual_AT_Output((unsigned char *)apn_buffer, sizeof(apn_buffer));
+        QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "< ret=%d %s", ret, apn_buffer);
+
+        sprintf((char *)apn_buffer, "%s", "AT+CGAUTH?\r\n");
+        QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "> %s", apn_buffer);
+        qapi_DAM_Visual_AT_Input((const unsigned char *)apn_buffer, strlen(apn_buffer));
+
+        qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
+        memset(apn_buffer, 0, sizeof(apn_buffer));
+        ret = qapi_DAM_Visual_AT_Output((unsigned char *)apn_buffer, sizeof(apn_buffer));
+        QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "< ret=%d %s", ret, apn_buffer);
+
+        if (strstr((const char *)apn_buffer, (const char *)apn->user_name))
+        {
+            auth_settled=1;
+        }
+    }
+    else
+    {
+        QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "failed to open visual at");
+    }
+    free(apn);
+}
 
 void softsim_event(int level, char *event)
 {
@@ -252,7 +366,8 @@ void softsim_event(int level, char *event)
     {
         if (use_softsim) 
         {
-            system_set_apn();
+            //system_set_apn();
+            apn_settled = auth_settled = 0;
             start_sw_sim();
         }
     }
@@ -531,6 +646,14 @@ void vTimerCallback(uint32 userData)
     qurt_pipe_send(softsim_task_queue[SOFTSIM_MAIN_TASK_ID], &req);
     //if(req.ptr)
   	//free(req.ptr);
+    if (0==apn_settled)
+    {
+        set_apn();
+    }
+    if (0==auth_settled)
+    {
+        set_auth;
+    }
 }
 
 
@@ -900,8 +1023,11 @@ void softsim_atfwd_cmd_handler_cb(boolean is_reg, char *atcmd_name,
                         }
 						else if (!strncmp((char *)at_fwd_params + 6, "APN", 3))
                         {
-							system_set_apn();
-							return;
+                            sprintf((char *)p_out_buffer, "apn_settled %d auth_settled %d", apn_settled, auth_settled);
+                            qapi_atfwd_send_resp(atcmd_name, (char *)p_out_buffer, QUEC_AT_RESULT_OK_V01);
+                            free((void *)p_out_buffer);
+                            apn_settled = auth_settled = 0;
+                            return;
                         }
                         else
                         {
