@@ -576,7 +576,7 @@ int softsim_fs_Read(FS_HANDLE FileHandle, void * DataPtr, UINT Length, UINT * Re
         {
             j=30720;
         }
-        ret=qapi_FS_Read(FileHandle,(char*)((char*)DataPtr+i),j,(uint32 *)Read);
+        ret=qapi_FS_Read(FileHandle,(uint8 *)((char*)DataPtr+i),j,(uint32 *)Read);
 
         if (ret || *Read!=j)
         {
@@ -958,7 +958,7 @@ void softsim_atfwd_cmd_handler_cb(boolean is_reg, char *atcmd_name,
                                  uint32 at_handle)
 {
     int    fd = -1;
-    int   wr_bytes = 0;
+    uint32   wr_bytes = 0;
     uint8_t *p_out_buffer = NULL;
 
     if(is_reg)  //Registration Successful,is_reg return 1 
