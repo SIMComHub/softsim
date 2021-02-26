@@ -262,7 +262,7 @@ static unsigned short at_read(unsigned char *apn_buffer, unsigned short cap)
         }
         if (++n >= AT_READ_TIMES)
         {
-            break;
+            return 0;
         }
         qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
     } while (1);
