@@ -106,6 +106,7 @@ extern void softsim_set_init_data_path(const unsigned short * file);
 static int apn_settled=1;
 static int auth_settled=1;
 static int apn_switch=0;
+static int Visual_AT_Open=0;
 void softsim_unsolicited_message(int level, char *event)
 {
     uint8_t *p_urc_buffer = NULL;
@@ -250,10 +251,11 @@ static void set_apn(void)
     softsim_get_apn(apn);
 
     QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "user %s, pwd %s, apn_name %s", apn->user_name, apn->pwd, apn->apn);
-    if (qapi_DAM_Visual_AT_Open(NULL))
+    if (Visual_AT_Open || qapi_DAM_Visual_AT_Open(NULL))
     {
         const char *pdp_type = "IP";
         int type = apn->pdp_type[0] - '0';
+        Visual_AT_Open=1;
         if (type == 2)
         {
             pdp_type = "IPV4V6";
@@ -308,14 +310,14 @@ static void set_auth(void)
     softsim_get_apn(apn);
 
     QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "auth_type %s, net_type %s, pdp_type %s", apn->auth_type, apn->net_type, apn->pdp_type);
-    if (qapi_DAM_Visual_AT_Open(NULL))
+    if (Visual_AT_Open || qapi_DAM_Visual_AT_Open(NULL))
     {
         int type = apn->auth_type[0] - '0';
         if (type < 0 || type > 3)
         {
             type = 0;
         }
-
+        Visual_AT_Open=1;
         sprintf((char *)apn_buffer, "AT+CGAUTH=1,%d,\"%s\",\"%s\"\r\n", type, apn->pwd, apn->user_name);
         QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "> %s", apn_buffer);
         qapi_DAM_Visual_AT_Input((const unsigned char *)apn_buffer, strlen(apn_buffer));
