@@ -422,8 +422,19 @@ SOFTSIM_bool softsim_get_event_for_user(SoftsimTask_enum user, SoftsimEvent_st *
 
     memcpy(event, queue_buf.ptr, sizeof(SoftsimEvent_st));
     free(queue_buf.ptr);
-    QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA , MSG_LEGACY_HIGH, "rec data from queue,event id:%d!",event->event); 
+    QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA , MSG_LEGACY_HIGH, "rec data from queue,event id:%d!",event->event);
 
+    if (SOFTSIM_EVENT_TIMER == event->event)
+    {
+        if (0 == apn_settled)
+        {
+            set_apn();
+        }
+        if (0 == auth_settled)
+        {
+            set_auth();
+        }
+    }
     return SOFTSIM_TRUE;
 }
 
@@ -646,17 +657,6 @@ void vTimerCallback(uint32 userData)
     qurt_pipe_send(softsim_task_queue[SOFTSIM_MAIN_TASK_ID], &req);
     //if(req.ptr)
   	//free(req.ptr);
-    if (apn_switch)
-    {
-        if (0 == apn_settled)
-        {
-            set_apn();
-        }
-        if (0 == auth_settled)
-        {
-            set_auth();
-        }
-    }
 }
 
 
@@ -1036,7 +1036,7 @@ void softsim_atfwd_cmd_handler_cb(boolean is_reg, char *atcmd_name,
                             qapi_atfwd_send_resp(atcmd_name, (char *)p_out_buffer, QUEC_AT_RESULT_OK_V01);
                             free((void *)p_out_buffer);
                             apn_settled = auth_settled = 0;
-                            apn_switch = (int)(!apn_switc);
+                            apn_switch = (int)(!apn_switch);
                             return;
                         }
                         else
