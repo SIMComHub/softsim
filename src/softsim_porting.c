@@ -255,7 +255,7 @@ static unsigned short at_read(unsigned char *apn_buffer, unsigned short cap)
             {
                 break;
             }
-            if (strstr((const char *)apn_buffer, Rsp_ERROR) || len == cap)
+            if (strstr((const char *)apn_buffer, Rsp_ERROR) || len >= cap)
             {
                 return 0;
             }
@@ -310,7 +310,7 @@ static void set_apn(void)
 
     ret =at_read((unsigned char *)apn_buffer, (unsigned short)sizeof(apn_buffer));
     QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "< ret=%d %s", ret, apn_buffer);
-    
+
     if (ret && strstr((const char *)apn_buffer, (const char *)apn->apn))
     {
         apn_settled=1;
