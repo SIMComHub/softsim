@@ -105,7 +105,7 @@ extern void softsim_set_init_data_path(const unsigned short * file);
 
 static int apn_settled=1;
 static int auth_settled=1;
-
+static int apn_switch=0;
 void softsim_unsolicited_message(int level, char *event)
 {
     uint8_t *p_urc_buffer = NULL;
@@ -646,13 +646,16 @@ void vTimerCallback(uint32 userData)
     qurt_pipe_send(softsim_task_queue[SOFTSIM_MAIN_TASK_ID], &req);
     //if(req.ptr)
   	//free(req.ptr);
-    if (0==apn_settled)
+    if (apn_switch)
     {
-        set_apn();
-    }
-    if (0==auth_settled)
-    {
-        set_auth();
+        if (0 == apn_settled)
+        {
+            set_apn();
+        }
+        if (0 == auth_settled)
+        {
+            set_auth();
+        }
     }
 }
 
@@ -1033,6 +1036,7 @@ void softsim_atfwd_cmd_handler_cb(boolean is_reg, char *atcmd_name,
                             qapi_atfwd_send_resp(atcmd_name, (char *)p_out_buffer, QUEC_AT_RESULT_OK_V01);
                             free((void *)p_out_buffer);
                             apn_settled = auth_settled = 0;
+                            apn_switch = (int)(!apn_switc);
                             return;
                         }
                         else
