@@ -235,6 +235,40 @@ SOFTSIM_bool system_set_apn(void)
   return (SOFTSIM_bool)(0);
 }
 */
+
+#define AT_READ_TIMES 10
+#define Rsp_OK "\nOK"
+#define Rsp_ERROR "\nERROR"
+
+static unsigned short at_read(unsigned char *apn_buffer, unsigned short cap)
+{
+    unsigned short ret, len, n;
+    memset(apn_buffer, 0, cap);
+    len = n = 0;
+    do
+    {
+        ret = qapi_DAM_Visual_AT_Output(apn_buffer + len, cap - len);
+        if (ret)
+        {
+            len += ret;
+            if (strstr((const char *)apn_buffer, Rsp_OK))
+            {
+                break;
+            }
+            if (strstr((const char *)apn_buffer, Rsp_ERROR) || len == cap)
+            {
+                return 0;
+            }
+        }
+        if (++n >= AT_READ_TIMES)
+        {
+            break;
+        }
+        qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
+    } while (1);
+    return len;
+}
+
 static void set_apn(void)
 {
     char apn_buffer[256];
@@ -267,27 +301,23 @@ static void set_apn(void)
     QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "> %s", apn_buffer);
     qapi_DAM_Visual_AT_Input((const unsigned char *)apn_buffer, strlen(apn_buffer));
 
-    qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
-    memset(apn_buffer, 0, sizeof(apn_buffer));
-    ret = qapi_DAM_Visual_AT_Output((unsigned char *)apn_buffer, sizeof(apn_buffer));
+    ret =at_read((unsigned char *)apn_buffer, (unsigned short)sizeof(apn_buffer));
     QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "< ret=%d %s", ret, apn_buffer);
 
     sprintf((char *)apn_buffer, "%s", "AT+CGDCONT?\r\n");
     QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "> %s", apn_buffer);
     qapi_DAM_Visual_AT_Input((const unsigned char *)apn_buffer, strlen(apn_buffer));
 
-    qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
-    memset(apn_buffer, 0, sizeof(apn_buffer));
-    ret = qapi_DAM_Visual_AT_Output((unsigned char *)apn_buffer, sizeof(apn_buffer));
+    ret =at_read((unsigned char *)apn_buffer, (unsigned short)sizeof(apn_buffer));
     QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "< ret=%d %s", ret, apn_buffer);
-
-    if (strstr((const char *)apn_buffer, (const char *)apn->apn))
+    
+    if (ret && strstr((const char *)apn_buffer, (const char *)apn->apn))
     {
         apn_settled=1;
     }
-
     free(apn);
 }
+
 static void set_auth(void)
 {
     char apn_buffer[256];
@@ -315,21 +345,17 @@ static void set_auth(void)
     QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "> %s", apn_buffer);
     qapi_DAM_Visual_AT_Input((const unsigned char *)apn_buffer, strlen(apn_buffer));
 
-    qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
-
-    ret = qapi_DAM_Visual_AT_Output((unsigned char *)apn_buffer, sizeof(apn_buffer));
+    ret =at_read((unsigned char *)apn_buffer, (unsigned short)sizeof(apn_buffer));
     QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "< ret=%d %s", ret, apn_buffer);
 
     sprintf((char *)apn_buffer, "%s", "AT+CGAUTH?\r\n");
     QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "> %s", apn_buffer);
     qapi_DAM_Visual_AT_Input((const unsigned char *)apn_buffer, strlen(apn_buffer));
 
-    qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
-    memset(apn_buffer, 0, sizeof(apn_buffer));
-    ret = qapi_DAM_Visual_AT_Output((unsigned char *)apn_buffer, sizeof(apn_buffer));
+    ret =at_read((unsigned char *)apn_buffer, (unsigned short)sizeof(apn_buffer));
     QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "< ret=%d %s", ret, apn_buffer);
 
-    if (strstr((const char *)apn_buffer, (const char *)apn->user_name))
+    if (ret && strstr((const char *)apn_buffer, (const char *)apn->user_name))
     {
         auth_settled=1;
     }
