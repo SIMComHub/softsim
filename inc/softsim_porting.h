@@ -4,7 +4,7 @@
 #include "eat_fs_errcode.h"
 #include "eat_fs_type.h"
 #include "qapi_uart.h"
-
+#define SOFTSIM_ENTRY_DELAY 1
 #define SOFTSIM_NULL 0
 #define NVRAM_EF_SOFTSIM_WHITECARD_LID "/softsim/WHITECARD"
 typedef enum

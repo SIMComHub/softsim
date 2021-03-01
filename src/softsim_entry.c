@@ -11,7 +11,7 @@
 #include "rcinit.h"
 #include "qapi_timer.h"
 #include "qapi_diag.h"
-
+#include "softsim_porting.h"
 extern links_softsim_init(void);
 
 void quectel_softsim_entry(int ignored)
@@ -22,7 +22,7 @@ void quectel_softsim_entry(int ignored)
 	{   
 		// Hyman_20190424, below codes just for test
 		QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA , MSG_LEGACY_HIGH, "quectel_softsim_entry, loop entry");
-        qapi_Timer_Sleep(1, QAPI_TIMER_UNIT_SEC, true);//21s delay to catch boot log; 1s is normal
+        qapi_Timer_Sleep(SOFTSIM_ENTRY_DELAY, QAPI_TIMER_UNIT_SEC, true);
 		links_softsim_init();
 		QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA , MSG_LEGACY_HIGH, "quectel_softsim_entry, loop end");
 		qapi_Timer_Sleep(1, QAPI_TIMER_UNIT_SEC, true);
