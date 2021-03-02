@@ -350,7 +350,7 @@ void uim_remote_ind_cb(
             softsim_take_soft_sim_rst_sem();
             atrlen = sizeof(atr);           
             softsim_trace_hex((uint8_t*)atr, atrlen);  
-            card->state = UIM_REMOTE_CARD_CONNECTED;
+            card->state = UIM_REMOTE_CARD_POWERED;
             LOGI("uim_remote_ind_cb: card is connected.");
         } 
         uim_remote_send_atr(card, atr, atrlen);

@@ -1048,7 +1048,7 @@ void softsim_atfwd_cmd_handler_cb(boolean is_reg, char *atcmd_name,
                         }
 						else if (!strncmp((char *)at_fwd_params + 6, "APN", 3))
                         {
-                            sprintf((char *)p_out_buffer, "release_0301 apn_settled %d auth_settled %d entry_delay:%d", apn_settled, auth_settled, SOFTSIM_ENTRY_DELAY);
+                            sprintf((char *)p_out_buffer, "release_0302 apn_settled %d auth_settled %d entry_delay:%d", apn_settled, auth_settled, SOFTSIM_ENTRY_DELAY);
                             qapi_atfwd_send_resp(atcmd_name, (char *)p_out_buffer, QUEC_AT_RESULT_OK_V01);
                             free((void *)p_out_buffer);
                             if (use_softsim)
