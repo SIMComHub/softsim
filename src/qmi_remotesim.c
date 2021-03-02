@@ -221,7 +221,8 @@ int uim_remote_disconnect_card(uim_remote_card *card)
 
 int uim_remote_send_atr(uim_remote_card *card, unsigned char *atr, int atrlen)
 {
-    if (card->state == UIM_REMOTE_CARD_DISCONNECTED || !atr || !atrlen)
+    LOGI("uim_remote_send_atr state %d atr %p len %d", card->state, atr, atrlen);
+    if (!atr || !atrlen)
         return QMI_RESULT_FAILURE_V01;
     return uim_remote_event(card, UIM_REMOTE_CARD_RESET_V01, card->slot, atr, atrlen, 0, UIM_REMOTE_CARD_ERROR_TYPE_ENUM_MIN_ENUM_VAL_V01);
 }
