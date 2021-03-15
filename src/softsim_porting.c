@@ -288,6 +288,7 @@ static void set_apn(void)
 
     if (0 == strlen((char *)apn->apn))
     {
+        softsim_trace("empty apn");
         goto _set;
     }
 
@@ -343,6 +344,7 @@ static void set_auth(void)
 
     if (0 == strlen((char *)apn->user_name))
     {
+        softsim_trace("empty user_name");
         goto _set;
     }
 
