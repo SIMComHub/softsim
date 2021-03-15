@@ -286,6 +286,11 @@ static void set_apn(void)
 
     QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "user %s, pwd %s, apn_name %s", apn->user_name, apn->pwd, apn->apn);
 
+    if (0 == strlen((char *)apn->apn))
+    {
+        goto _set;
+    }
+
     type = apn->pdp_type[0] - '0';
     if (type == 2)
     {
@@ -312,7 +317,8 @@ static void set_apn(void)
 
     if (ret && strstr((const char *)apn_buffer, (const char *)apn->apn))
     {
-        apn_settled=1;
+    _set:
+        apn_settled = 1;
     }
     free(apn);
 }
@@ -333,7 +339,12 @@ static void set_auth(void)
     memset(apn, 0, sizeof(SoftsimApnProfile_st));
     softsim_get_apn(apn);
 
-    QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "auth_type %s, net_type %s, pdp_type %s", apn->auth_type, apn->net_type, apn->pdp_type);
+    QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "auth_type %s, user_name %s, pwd %s", apn->auth_type, apn->user_name, apn->pwd);
+
+    if (0 == strlen((char *)apn->user_name))
+    {
+        goto _set;
+    }
 
     type = apn->auth_type[0] - '0';
     if (type < 0 || type > 3)
@@ -356,7 +367,8 @@ static void set_auth(void)
 
     if (ret && strstr((const char *)apn_buffer, (const char *)apn->user_name))
     {
-        auth_settled=1;
+    _set:
+        auth_settled = 1;
     }
     free(apn);
 }
@@ -1048,7 +1060,7 @@ void softsim_atfwd_cmd_handler_cb(boolean is_reg, char *atcmd_name,
                         }
 						else if (!strncmp((char *)at_fwd_params + 6, "APN", 3))
                         {
-                            sprintf((char *)p_out_buffer, "release_0302 apn_settled %d auth_settled %d entry_delay:%d", apn_settled, auth_settled, SOFTSIM_ENTRY_DELAY);
+                            sprintf((char *)p_out_buffer, "release_0315 apn_settled %d auth_settled %d entry_delay:%d", apn_settled, auth_settled, SOFTSIM_ENTRY_DELAY);
                             qapi_atfwd_send_resp(atcmd_name, (char *)p_out_buffer, QUEC_AT_RESULT_OK_V01);
                             free((void *)p_out_buffer);
                             if (use_softsim)
