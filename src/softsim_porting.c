@@ -14,6 +14,12 @@
 #include "qapi_atfwd.h"
 #include "qapi_device_info.h"
 #include "softsim_porting.h"
+#include "common_v01.h"
+#include "qmi_client.h"
+#include "wireless_data_service_v01.h"
+#include "qmi_err_codes.h"
+
+#define SOFTSIM_QMI_CFG_APN_AUTH
 
 #define AT_BUFFER_SIZE 256
 //FILE
@@ -40,6 +46,9 @@ static SoftsimSemId_st soft_sim_rst;
 //static SoftsimEvent_st *soft_sim_event_ptr;
 static char imei_buffer[16] = {0};
 
+#if defined(SOFTSIM_QMI_CFG_APN_AUTH)
+static qmi_client_type softsim_wds_client_handle = NULL;
+#endif /* SOFTSIM_QMI_CFG_APN_AUTH */
 /**************************************************************************
 *                                TASK DEFINE
 ***************************************************************************/
@@ -235,6 +244,8 @@ SOFTSIM_bool system_set_apn(void)
 }
 */
 
+
+#if !defined(SOFTSIM_QMI_CFG_APN_AUTH)
 #define AT_READ_TIMES 10
 #define Rsp_OK "\nOK"
 #define Rsp_ERROR "\nERROR"
@@ -374,6 +385,209 @@ static void set_auth(void)
     }
     free(apn);
 }
+#endif /* SOFTSIM_QMI_CFG_APN_AUTH */
+
+#if defined(SOFTSIM_QMI_CFG_APN_AUTH)
+void softsim_wds_ind_cb(qmi_client_type user_handle,unsigned int msg_id,void *ind_buf,unsigned int ind_buf_len,void *ind_cb_data) 
+{
+  return;
+}
+
+void softsim_qmi_wds_init(void)
+{
+  qmi_cci_os_signal_type qmi_wds_os_params = {0};
+  qmi_idl_service_object_type wds_service_object;
+  int qmi_error;
+
+  if (NULL == softsim_wds_client_handle)
+  {
+    wds_service_object = wds_get_service_object_v01( );
+    do
+    {
+      qmi_error = qmi_client_init_instance(wds_service_object,
+                                           QMI_CLIENT_INSTANCE_ANY,
+                                           softsim_wds_ind_cb,
+                                           NULL,
+                                           &qmi_wds_os_params,
+                                           0,
+                                           &softsim_wds_client_handle);
+      if(qmi_error == QMI_NO_ERR)
+        break;
+      qapi_Timer_Sleep(200, QAPI_TIMER_UNIT_MSEC, true);
+    }while(1);
+  }
+}
+
+static int softsim_check_int_param(int valid, int base_value, int check_value)
+{
+   int ret = 0;
+
+   if ((1 == valid) && (base_value == check_value))
+   {
+      ret = 1;
+   }
+
+   return ret;
+}
+
+static int softsim_check_str_param(int valid, char *base_str, char *check_str)
+{
+   int ret = 0;
+
+   if ((1 == valid) && !strcmp(base_str, check_str))
+   {
+      ret = 1;
+   }
+
+   return ret;
+}
+
+static void softsim_qmi_config_apn_auth(void)
+{
+    wds_get_profile_list_lite_req_msg_v01   wds_get_profile_list_lite_req;
+    wds_get_profile_list_lite_resp_msg_v01  wds_get_profile_list_lite_resp;
+    wds_modify_profile_settings_lite_req_msg_v01  wds_modify_profile_setting_lite_req;
+    wds_modify_profile_settings_lite_resp_msg_v01 wds_modify_profile_setting_lite_resp;
+    wds_get_profile_settings_lite_req_msg_v01  wds_get_profile_settings_lite_req;
+    wds_get_profile_settings_lite_resp_msg_v01 wds_get_profile_settings_lite_resp;
+    wds_pdp_type_enum_v01    wds_pdp_type = WDS_PDP_TYPE_PDP_IPV4_V01;
+    wds_auth_pref_mask_v01   auth_pref = 0;
+    qmi_client_error_type qmi_err_code;
+    SoftsimApnProfile_st *apn;
+    int type;
+    int no_user;
+    no_user=1;
+
+    apn = (SoftsimApnProfile_st *)malloc(sizeof(SoftsimApnProfile_st));
+    if (apn == NULL)
+    {
+        softsim_trace("malloc failed");
+        return;
+    }
+
+    QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH,"softsim_qmi_config_apn_auth");
+    memset(apn, 0, sizeof(SoftsimApnProfile_st));
+    softsim_get_apn(apn);
+
+    QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "softsim_qmi_config_apn_auth: user %s, pwd %s, apn_name %s", apn->user_name, apn->pwd, apn->apn);
+    type = apn->pdp_type[0] - '0';
+    if (type == 2)
+    {
+       wds_pdp_type = WDS_PDP_TYPE_PDP_IPV4V6_V01;
+    }
+    else if (type == 4)
+    {
+       wds_pdp_type = WDS_PDP_TYPE_PDP_NON_IP_V01;
+    }
+
+    type = apn->auth_type[0] - '0';
+    if ((type >= 0) && (type <= 3))
+    {
+        auth_pref = type;
+    }
+    
+
+    if(NULL == softsim_wds_client_handle) 
+    {
+      softsim_qmi_wds_init( );
+    }
+
+    memset(&wds_get_profile_list_lite_req, 0x0, sizeof(wds_get_profile_list_lite_req));
+    memset(&wds_get_profile_list_lite_resp, 0x0, sizeof(wds_get_profile_list_lite_resp));
+    memset(&wds_modify_profile_setting_lite_req, 0x0, sizeof(wds_modify_profile_setting_lite_req));
+    memset(&wds_modify_profile_setting_lite_resp, 0x0, sizeof(wds_modify_profile_setting_lite_resp));
+    memset(&wds_get_profile_settings_lite_req, 0x0, sizeof(wds_get_profile_settings_lite_req));
+    memset(&wds_get_profile_settings_lite_resp, 0x0, sizeof(wds_get_profile_settings_lite_resp));
+
+    qmi_err_code = qmi_client_send_msg_sync(softsim_wds_client_handle,
+                                            QMI_WDS_GET_PROFILE_LIST_LITE_REQ_V01,
+                                            (void *)&wds_get_profile_list_lite_req,
+                                            sizeof(wds_get_profile_list_lite_req_msg_v01),
+                                            (void *)&wds_get_profile_list_lite_resp,
+                                            sizeof(wds_get_profile_list_lite_resp_msg_v01),
+                                            500);
+    QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "softsim_qmi_config_apn_auth: get profile list %d, %d",  qmi_err_code, wds_get_profile_list_lite_resp.resp.result);
+    if ((QMI_NO_ERR == qmi_err_code) || (QMI_RESULT_SUCCESS_V01 == wds_get_profile_list_lite_resp.resp.result))
+    {
+       if (1 == wds_get_profile_list_lite_resp.profile_list_valid)
+       {
+          QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH, "softsim_qmi_config_apn_auth: profile len %d", wds_get_profile_list_lite_resp.profile_list_len);
+          if (wds_get_profile_list_lite_resp.profile_list_len >= 1)
+          {
+             wds_modify_profile_setting_lite_req.pdp_type = wds_get_profile_list_lite_resp.profile_list[0].pdp_type;
+             if (strlen(wds_get_profile_list_lite_resp.profile_list[0].apn_name) > 0)
+             {
+                wds_modify_profile_setting_lite_req.apn_name_valid = 1;
+                strcpy((char *)wds_modify_profile_setting_lite_req.apn_name, wds_get_profile_list_lite_resp.profile_list[0].apn_name);
+             }
+
+             wds_modify_profile_setting_lite_req.changed_pdp_type_valid = 1;
+             wds_modify_profile_setting_lite_req.changed_pdp_type = wds_pdp_type;
+             wds_modify_profile_setting_lite_req.changed_apn_name_valid = 1;
+             if (strlen((char *)(apn->apn)) > 0)
+             {
+                strcpy((char *)wds_modify_profile_setting_lite_req.changed_apn_name, (char *)(apn->apn));
+             }
+             wds_modify_profile_setting_lite_req.authentication_preference_valid = 1;
+             wds_modify_profile_setting_lite_req.authentication_preference = auth_pref;
+             if (auth_pref > 0)
+             {
+                wds_modify_profile_setting_lite_req.username_valid = 1;
+                if (strlen((char *)(apn->user_name)) > 0)
+                {
+                   strcpy((char *)wds_modify_profile_setting_lite_req.username, (char *)(apn->user_name));
+                   no_user=0;
+                }
+                wds_modify_profile_setting_lite_req.password_valid = 1;
+                if (strlen((char *)(apn->pwd)) > 0)
+                {
+                   strcpy((char *)wds_modify_profile_setting_lite_req.password, (char *)(apn->pwd));
+                }
+             }
+             qmi_err_code = qmi_client_send_msg_sync(softsim_wds_client_handle,
+                                                     QMI_WDS_MODIFY_PROFILE_SETTINGS_LITE_REQ_V01,
+                                                     (void *)&wds_modify_profile_setting_lite_req,
+                                                     sizeof(wds_modify_profile_settings_lite_req_msg_v01),
+                                                     (void *)&wds_modify_profile_setting_lite_resp,
+                                                     sizeof(wds_modify_profile_settings_lite_resp_msg_v01),
+                                                     500);
+             if ((QMI_NO_ERR == qmi_err_code) || (QMI_RESULT_SUCCESS_V01 == wds_modify_profile_setting_lite_resp.resp.result))
+             {
+                QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH,"softsim_qmi_config_apn_auth: modify profile %d,%d", qmi_err_code, wds_modify_profile_setting_lite_resp.resp.result);
+                wds_get_profile_settings_lite_req.pdp_type = wds_pdp_type;
+                if (strlen((char *)(apn->apn)) > 0)
+                {
+                   wds_get_profile_settings_lite_req.apn_name_valid = 1;
+                   strcpy((char *)wds_get_profile_settings_lite_req.apn_name, (char *)(apn->apn));
+                }
+
+                qmi_err_code = qmi_client_send_msg_sync(softsim_wds_client_handle,
+                                                        QMI_WDS_GET_PROFILE_SETTINGS_LITE_REQ_V01,
+                                                        (void *)&wds_get_profile_settings_lite_req,
+                                                        sizeof(wds_get_profile_settings_lite_req),
+                                                        (void *)&wds_get_profile_settings_lite_resp,
+                                                        sizeof(wds_get_profile_settings_lite_resp),
+                                                        500);
+                QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH,"softsim_qmi_config_apn_auth: get profile %d,%d", qmi_err_code, wds_get_profile_settings_lite_resp.resp.result);
+                if ((QMI_NO_ERR == qmi_err_code) || (QMI_RESULT_SUCCESS_V01 == wds_get_profile_settings_lite_resp.resp.result))
+                {
+                   if ((1 == softsim_check_int_param(wds_get_profile_settings_lite_resp.pdp_type_valid, wds_pdp_type, wds_get_profile_settings_lite_resp.pdp_type))
+                       && (1 == softsim_check_str_param(wds_get_profile_settings_lite_resp.apn_name_valid, (char *)(apn->apn), wds_get_profile_settings_lite_resp.apn_name))
+                       && (1 == softsim_check_int_param(wds_get_profile_settings_lite_resp.authentication_preference_valid, auth_pref, wds_get_profile_settings_lite_resp.authentication_preference))
+                       && (1==no_user || 1 == softsim_check_str_param(wds_get_profile_settings_lite_resp.username_valid, (char *)(apn->user_name), wds_get_profile_settings_lite_resp.username)))
+                   {
+                      apn_settled = 1;
+                      auth_settled = 1;
+                      QAPI_MSG_SPRINTF(MSG_SSID_LINUX_DATA, MSG_LEGACY_HIGH,"softsim_qmi_config_apn_auth: config success %d,%d", apn_settled, auth_settled);
+                   }
+                } 
+             }
+          }
+       }
+    }
+    free(apn);
+}
+#endif /* SOFTSIM_QMI_CFG_APN_AUTH */
 
 void softsim_event(int level, char *event)
 {
@@ -396,7 +610,9 @@ void softsim_event(int level, char *event)
         if (use_softsim) 
         {
             //system_set_apn();
+            #if !defined(SOFTSIM_QMI_CFG_APN_AUTH)
             qapi_DAM_Visual_AT_Open(NULL);
+            #endif /* SOFTSIM_QMI_CFG_APN_AUTH */
             apn_settled = auth_settled = 0;
             start_sw_sim();
         }
@@ -456,6 +672,12 @@ SOFTSIM_bool softsim_get_event_for_user(SoftsimTask_enum user, SoftsimEvent_st *
 
     if (SOFTSIM_EVENT_TIMER == event->event)
     {
+        #if defined(SOFTSIM_QMI_CFG_APN_AUTH)
+        if (0 == apn_settled)
+        {          
+            softsim_qmi_config_apn_auth( );
+        }
+        #else /* SOFTSIM_QMI_CFG_APN_AUTH */
         if (0 == apn_settled)
         {
             set_apn();
@@ -464,6 +686,7 @@ SOFTSIM_bool softsim_get_event_for_user(SoftsimTask_enum user, SoftsimEvent_st *
         {
             set_auth();
         }
+        #endif /* SOFTSIM_QMI_CFG_APN_AUTH */
     }
     return SOFTSIM_TRUE;
 }
